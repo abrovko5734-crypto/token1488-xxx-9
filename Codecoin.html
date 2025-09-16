@@ -238,7 +238,168 @@ window.onload = function () {
     updateScore();
     if (autoClickEnabled) startAutoClick();
   }
-  loadSkin();
-  showLeaderboard();
+  let ruina = 0;
+let clickPower = 1;
+let upgradeCost = 50;
+let autoClickEnabled = false;
+
+const skins = [
+  "https://i.postimg.cc/d7hZXDtL/photo-1-2025-09-16-13-48-10.jpg",
+  "https://i.postimg.cc/4HgKm5v9/photo-2-2025-09-16-13-48-10.jpg",
+  "https://i.postimg.cc/0MmMk3Sv/photo-3-2025-09-16-13-48-10.jpg",
+  "https://i.postimg.cc/RJLWfHGb/photo-4-2025-09-16-13-48-10.jpg",
+  "https://i.postimg.cc/7CjJyDfX/photo-5-2025-09-16-13-48-10.jpg",
+  "https://i.postimg.cc/0rYMhTxd/photo-6-2025-09-16-13-48-10.jpg"
+];
+let currentSkinIndex = 0;
+
+function updateSkin() {
+  document.getElementById("tapImage").src = skins[currentSkinIndex];
+  localStorage.setItem("ruinaSkinIndex", currentSkinIndex);
+}
+
+function nextSkin() {
+  currentSkinIndex = (currentSkinIndex + 1) % skins.length;
+  updateSkin();
+}
+
+function prevSkin() {
+  currentSkinIndex = (currentSkinIndex - 1 + skins.length) % skins.length;
+  updateSkin();
+}
+
+function updateScore() {
+  document.getElementById("score").innerText = `RUINA: ${ruina}`;
+  document.getElementById("clickPowerDisplay").innerText = `Click Power: +${clickPower}`;
+  document.getElementById("upgradeCost").innerText = upgradeCost;
+}
+
+function showMessage(msg) {
+  document.getElementById("message").innerText = msg;
+}
+
+function tap() {
+  ruina += clickPower;
+  updateScore();
+  autoSaveScore();
   saveData();
-  setInterval(()
+}
+
+function buyUpgrade() {
+  if (ruina >= upgradeCost) {
+    ruina -= upgradeCost;
+    clickPower += 1;
+    upgradeCost = Math.floor(upgradeCost * 1.5);
+    updateScore();
+    showMessage("Upgrade purchased!");
+    saveData();
+  } else {
+    showMessage("Not enough RUINA for upgrade.");
+  }
+}
+
+function buyAutoClick() {
+  if (!autoClickEnabled && ruina >= 100000) {
+    ruina -= 100000;
+    autoClickEnabled = true;
+    startAutoClick();
+    showMessage("Auto Click enabled!");
+    saveData();
+  } else if (autoClickEnabled) {
+    showMessage("Auto Click already enabled.");
+  } else {
+    showMessage("Not enough RUINA for Auto Click.");
+  }
+}
+
+function startAutoClick() {
+  setInterval(() => {
+    ruina += clickPower;
+    updateScore();
+    autoSaveScore();
+    saveData();
+  }, 1000);
+}
+
+function containsBadWords(name) {
+  const badWords = ["хуй", "пизда", "еба", "сука", "бляд", "fuck", "shit", "bitch", "писюн", "песюн", "песун", "члэн", "член", "ебаба", "ебоба"];
+  return badWords.some(word => name.toLowerCase().includes(word));
+}
+
+function saveScore() {
+  const name = document.getElementById("playerName").value.trim();
+  if (!name) return showMessage("Enter your name to save score.");
+  if (containsBadWords(name)) return showMessage("Inappropriate name. Please choose a different one.");
+
+  const leaderboard = JSON.parse(localStorage.getItem("ruinaLeaderboard")) || [];
+  const existing = leaderboard.find(entry => entry.name === name);
+
+  if (existing) {
+    if (ruina > existing.ruina) {
+      existing.ruina = ruina;
+      showMessage("New high score saved!");
+    } else {
+      showMessage("Your previous score is higher.");
+    }
+  } else {
+    leaderboard.push({ name, ruina });
+    showMessage("Score saved!");
+  }
+
+  leaderboard.sort((a, b) => b.ruina - a.ruina);
+  localStorage.setItem("ruinaLeaderboard", JSON.stringify(leaderboard));
+  showLeaderboard();
+}
+
+function autoSaveScore() {
+  const name = document.getElementById("playerName").value.trim();
+  if (!name || containsBadWords(name)) return;
+
+  const leaderboard = JSON.parse(localStorage.getItem("ruinaLeaderboard")) || [];
+  const existing = leaderboard.find(entry => entry.name === name);
+
+  if (existing) {
+    if (ruina > existing.ruina) existing.ruina = ruina;
+  } else {
+    leaderboard.push({ name, ruina });
+  }
+
+  leaderboard.sort((a, b) => b.ruina - a.ruina);
+  localStorage.setItem("ruinaLeaderboard", JSON.stringify(leaderboard));
+  showLeaderboard();
+}
+
+function showLeaderboard() {
+  const leaderboard = JSON.parse(localStorage.getItem("ruinaLeaderboard")) || [];
+  const list = document.getElementById("leaderboard");
+  list.innerHTML = "";
+  leaderboard.slice(0, 5).forEach((entry, index) => {
+    const li = document.createElement("li");
+    li.innerText = `${index + 1}. ${entry.name} — ${entry.ruina} RUINA`;
+    list.appendChild(li);
+  });
+}
+
+function saveData() {
+  const data = {
+    ruina,
+    clickPower,
+    upgradeCost,
+    autoClickEnabled
+  };
+  localStorage.setItem("ruinaData", JSON.stringify(data));
+}
+
+window.onload = function () {
+  const saved = JSON.parse(localStorage.getItem("ruinaData"));
+  if (saved) {
+    ruina = saved.ruina || 0;
+    clickPower = saved.clickPower || 1;
+    upgradeCost = saved.upgradeCost || 50;
+    autoClickEnabled = saved.autoClickEnabled || false;
+    if (autoClickEnabled) startAutoClick();
+  }
+  loadSkin();
+  updateScore();
+  showLeaderboard();
+};
